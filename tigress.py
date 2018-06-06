@@ -41,7 +41,7 @@ def main(path, module):
 
     # get a reference to the compiled SECRET function
     engine = create_execution_engine()
-    compile_ir(str(mod))
+    compile_ir(engine, str(mod))
     SECRET = engine.get_function_address("SECRET")
     SECRET = CFUNCTYPE(c_uint64, c_uint64)(SECRET)
 

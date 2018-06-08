@@ -1,41 +1,33 @@
 #!/bin/bash
 
-for i in tigress-0-challenge-0 \
-         tigress-0-challenge-1 \
-         tigress-0-challenge-2 \
-         tigress-0-challenge-3 \
-         tigress-0-challenge-4; do
-  ./tigress.py ./tigress-challenges/$i -l output/$i.ll
-done
+set -e
 
-# for i in tigress-1-challenge-0 \
-#          tigress-1-challenge-1 \
-#          tigress-1-challenge-2 \
-#          tigress-1-challenge-3 \
-#          tigress-1-challenge-4; do
-#   ./tigress.py ./tigress-challenges/$i -l output/$i.ll
-# done
+./tigress.py ./tigress-challenges/tigress-0-challenge-0 output/tigress-0-challenge-0.ll
+./tigress.py ./tigress-challenges/tigress-0-challenge-1 output/tigress-0-challenge-1.ll
+./tigress.py ./tigress-challenges/tigress-0-challenge-2 output/tigress-0-challenge-2.ll
+./tigress.py ./tigress-challenges/tigress-0-challenge-3 output/tigress-0-challenge-3.ll
+./tigress.py ./tigress-challenges/tigress-0-challenge-4 output/tigress-0-challenge-4.ll
 
-# for i in tigress-2-challenge-0 \
-#          tigress-2-challenge-1 \
-#          tigress-2-challenge-2 \
-#          tigress-2-challenge-3 \
-#          tigress-2-challenge-4; do
-#   ./tigress.py ./tigress-challenges/$i -l output/$i.ll
-# done
+# XXX ./tigress.py ./tigress-challenges/tigress-1-challenge-0 output/tigress-1-challenge-0.ll
+# XXX ./tigress.py ./tigress-challenges/tigress-1-challenge-1 output/tigress-1-challenge-1.ll
+# XXX ./tigress.py ./tigress-challenges/tigress-1-challenge-2 output/tigress-1-challenge-2.ll
+# XXX ./tigress.py ./tigress-challenges/tigress-1-challenge-3 output/tigress-1-challenge-3.ll
+# XXX ./tigress.py ./tigress-challenges/tigress-1-challenge-4 output/tigress-1-challenge-4.ll
 
-# for i in tigress-3-challenge-0 \
-#          tigress-3-challenge-1 \
-#          tigress-3-challenge-2 \
-#          tigress-3-challenge-3 \
-#          tigress-3-challenge-4; do
-#   ./tigress.py ./tigress-challenges/$i -l output/$i.ll
-# done
+./tigress.py ./tigress-challenges/tigress-2-challenge-0 output/tigress-2-challenge-0.ll
+./tigress.py ./tigress-challenges/tigress-2-challenge-1 output/tigress-2-challenge-1.ll
+./tigress.py ./tigress-challenges/tigress-2-challenge-2 output/tigress-2-challenge-2.ll
+./tigress.py ./tigress-challenges/tigress-2-challenge-3 output/tigress-2-challenge-3.ll
+./tigress.py ./tigress-challenges/tigress-2-challenge-4 output/tigress-2-challenge-4.ll
 
-# for i in tigress-4-challenge-0 \
-#          tigress-4-challenge-1 \
-#          tigress-4-challenge-2 \
-#          tigress-4-challenge-3 \
-#          tigress-4-challenge-4; do
-#   ./tigress.py ./tigress-challenges/$i -l output/$i.ll
-# done
+./tigress.py ./tigress-challenges/tigress-3-challenge-0 output/tigress-3-challenge-0.ll
+./tigress.py ./tigress-challenges/tigress-3-challenge-1 output/tigress-3-challenge-1.ll
+./tigress.py ./tigress-challenges/tigress-3-challenge-2 output/tigress-3-challenge-2.ll
+./tigress.py ./tigress-challenges/tigress-3-challenge-3 output/tigress-3-challenge-3.ll
+./tigress.py ./tigress-challenges/tigress-3-challenge-4 output/tigress-3-challenge-4.ll
+
+./tigress.py ./tigress-challenges/tigress-4-challenge-0 output/tigress-4-challenge-0.ll
+./tigress.py ./tigress-challenges/tigress-4-challenge-1 output/tigress-4-challenge-1.ll
+./tigress.py ./tigress-challenges/tigress-4-challenge-2 output/tigress-4-challenge-2.ll
+./tigress.py ./tigress-challenges/tigress-4-challenge-3 output/tigress-4-challenge-3.ll
+./tigress.py ./tigress-challenges/tigress-4-challenge-4 output/tigress-4-challenge-4.ll

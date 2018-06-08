@@ -1,10 +1,10 @@
 import claripy
 import logging
 
-from z3       import *
-from llvmlite import ir
-from llvmlite import binding
-from IPython  import embed
+from z3        import *
+from llvmlite  import ir
+from llvmlite  import binding
+from functools import partial
 
 binding.initialize()
 binding.initialize_native_target()
@@ -15,12 +15,14 @@ l = logging.getLogger("tigress.utils")
 
 
 def z3_to_llvm(fun, bld, ast):
-    args = z3_args(ast)
+    args = map(partial(z3_to_llvm, fun, bld), z3_args(ast))
     kind = ast.decl().kind()
     if kind == Z3_OP_TRUE:
+	assert len(args) == 0
         return ir.Constant(ir.IntType(1), 1)
     elif kind == Z3_OP_FALSE:
         return ir.Constant(ir.IntType(1), 0)
+	assert len(args) == 0
     elif kind == Z3_OP_BNUM:
         return ir.Constant(ir.IntType(ast.size()), ast.as_long())
     elif kind == Z3_OP_UNINTERPRETED:
@@ -28,62 +30,66 @@ def z3_to_llvm(fun, bld, ast):
         assert fun.args[0].type.width == ast.size()
         return fun.args[0]
     elif kind == Z3_OP_BNOT:
-        ret = bld.not_(z3_to_llvm(fun, bld, args[0]))
+	assert len(args) == 1
+        ret = bld.not_(args[0])
         assert ret.type.width == ast.size()
         return ret
     elif kind == Z3_OP_BMUL:
         # note: signed multiplication
-        ret = bld.mul(z3_to_llvm(fun, bld, args[0]),
-                      z3_to_llvm(fun, bld, args[1]))
+	assert len(args) == 2
+        ret = bld.mul(args[0], args[1])
         assert ret.type.width == ast.size()
         return ret
     elif kind == Z3_OP_BUDIV:
-        ret = bld.udiv(z3_to_llvm(fun, bld, args[0]),
-                       z3_to_llvm(fun, bld, args[1]))
+	assert len(args) == 2
+        ret = bld.udiv(args[0], args[1])
         assert ret.type.width == ast.size()
         return ret
     elif kind == Z3_OP_BADD:
-        ret = bld.add(z3_to_llvm(fun, bld, args[0]),
-                      z3_to_llvm(fun, bld, args[1]))
+	assert len(args) == 2
+        ret = bld.add(args[0], args[1])
         assert ret.type.width == ast.size()
         return ret
-    elif kind == Z3_OP_BAND or kind == Z3_OP_AND:
-        return bld.and_(z3_to_llvm(fun, bld, args[0]),
-                        z3_to_llvm(fun, bld, args[1]))
-    elif kind == Z3_OP_BOR or kind == Z3_OP_OR:
-        return bld.or_(z3_to_llvm(fun, bld, args[0]),
-                       z3_to_llvm(fun, bld, args[1]))
+    elif kind == Z3_OP_BAND:
+	assert len(args) == 2
+        return bld.and_(args[0], args[1])
+    elif kind == Z3_OP_BOR:
+	assert len(args) == 2
+        return bld.or_(args[0], args[1])
+    elif kind == Z3_OP_AND:
+        return reduce(bld.and_, args)
+    elif kind == Z3_OP_OR:
+        return reduce(bld.or_, args)
     elif kind == Z3_OP_BUREM_I or kind == Z3_OP_BUREM:
-        ret = bld.urem(z3_to_llvm(fun, bld, args[0]),
-                       z3_to_llvm(fun, bld, args[1]))
+	assert len(args) == 2
+        ret = bld.urem(args[0], args[1])
         assert ret.type.width == ast.size()
         return ret
     elif kind == Z3_OP_BXOR:
-        ret = bld.xor(z3_to_llvm(fun, bld, args[0]),
-                      z3_to_llvm(fun, bld, args[1]))
+	assert len(args) == 2
+        ret = bld.xor(args[0], args[1])
         assert ret.type.width == ast.size()
         return ret
     elif kind == Z3_OP_BSHL:
-        ret = bld.shl(z3_to_llvm(fun, bld, args[0]),
-                      z3_to_llvm(fun, bld, args[1]))
+	assert len(args) == 2
+        ret = bld.shl(args[0], args[1])
         assert ret.type.width == ast.size()
         return ret
     elif kind == Z3_OP_BLSHR:
-        ret = bld.lshr(z3_to_llvm(fun, bld, args[0]),
-                       z3_to_llvm(fun, bld, args[1]))
+	assert len(args) == 2
+        ret = bld.lshr(args[0], args[1])
         assert ret.type.width == ast.size()
         return ret
     elif kind == Z3_OP_EXTRACT:
+	assert len(args) == 1
         parms = ast.params()
-        tmp0 = z3_to_llvm(fun, bld, args[0])
-        tmp1 = bld.lshr(tmp0, ir.Constant(tmp0.type, parms[1]))
+        tmp1 = bld.lshr(args[0], ir.Constant(args[0].type, parms[1]))
         tmp2 = bld.trunc(tmp1, ir.IntType(int(parms[0] - parms[1] + 1)))
         assert tmp2.type.width == ast.size()
         return tmp2
     elif kind == Z3_OP_CONCAT:
-        curr = z3_to_llvm(fun, bld, args[0])
-        for next in args[1:]:
-            tmp0 = z3_to_llvm(fun, bld, next)
+        curr = args[0]
+        for tmp0 in args[1:]:
             next = bld.zext(tmp0, ir.IntType(tmp0.type.width + curr.type.width))
             curr = bld.zext(curr, ir.IntType(tmp0.type.width + curr.type.width))
             curr = bld.shl(curr, ir.Constant(curr.type, int(tmp0.type.width)))
@@ -91,43 +97,29 @@ def z3_to_llvm(fun, bld, ast):
         assert curr.type.width == ast.size()
         return curr
     elif kind == Z3_OP_DISTINCT:
-        ret = bld.icmp_unsigned("!=",
-                                z3_to_llvm(fun, bld, args[0]),
-                                z3_to_llvm(fun, bld, args[1]))
-        return ret
+	assert len(args) == 2
+        return bld.icmp_unsigned("!=", args[0], args[1])
     elif kind == Z3_OP_EQ:
-        ret = bld.icmp_unsigned("==",
-                                z3_to_llvm(fun, bld, args[0]),
-                                z3_to_llvm(fun, bld, args[1]))
-        return ret
+	assert len(args) == 2
+        return bld.icmp_unsigned("==", args[0], args[1])
     elif kind == Z3_OP_ULEQ:
-        ret = bld.icmp_unsigned("<=",
-                                z3_to_llvm(fun, bld, args[0]),
-                                z3_to_llvm(fun, bld, args[1]))
-        return ret
+	assert len(args) == 2
+        return bld.icmp_unsigned("<=", args[0], args[1])
     elif kind == Z3_OP_UGEQ:
-        ret = bld.icmp_unsigned(">=",
-                                z3_to_llvm(fun, bld, args[0]),
-                                z3_to_llvm(fun, bld, args[1]))
-        return ret
+	assert len(args) == 2
+        return bld.icmp_unsigned(">=", args[0], args[1])
     elif kind == Z3_OP_SLEQ:
-        ret = bld.icmp_signed("<=",
-                              z3_to_llvm(fun, bld, args[0]),
-                              z3_to_llvm(fun, bld, args[1]))
-        return ret
+	assert len(args) == 2
+        return bld.icmp_signed("<=", args[0], args[1])
     elif kind == Z3_OP_SGEQ:
-        ret = bld.icmp_signed(">=",
-                              z3_to_llvm(fun, bld, args[0]),
-                              z3_to_llvm(fun, bld, args[1]))
-        return ret
+	assert len(args) == 2
+        return bld.icmp_signed(">=", args[0], args[1])
     elif kind == Z3_OP_ITE:
-        ret = bld.select(z3_to_llvm(fun, bld, args[0]),
-                         z3_to_llvm(fun, bld, args[1]),
-                         z3_to_llvm(fun, bld, args[2]))
+	assert len(args) == 3
+        ret = bld.select(args[0], args[1], args[2])
         assert ret.type.width == ast.size()
         return ret
     else:
-        embed()
         raise NotImplementedError(ast.decl().name())
 
 
@@ -136,8 +128,8 @@ def z3_args(ast):
 
 
 def LLVM(fun, bld, ast):
-    z = claripy.backends.z3.convert(ast)
     l.info("Converting z3 expression to LLVM IR")
+    z = claripy.backends.z3.convert(ast)
     l.debug("{}".format(z))
     return z3_to_llvm(fun, bld, z)
 
@@ -150,16 +142,15 @@ def create_execution_engine():
     return target_machine, engine
 
 
-def compile_ir(engine, llvm_ir, opt=True):
+def compile_ir(engine, llvm_ir):
     mod = binding.parse_assembly(llvm_ir)
     mod.verify()
 
-    if opt:
-        pmb = binding.create_pass_manager_builder()
-        pmb.opt_level = 2
-        pm = binding.create_module_pass_manager()
-        pmb.populate(pm)
-        pm.run(mod)
+    pmb = binding.create_pass_manager_builder()
+    pmb.opt_level = 2
+    pm = binding.create_module_pass_manager()
+    pmb.populate(pm)
+    pm.run(mod)
 
     engine.add_module(mod)
     engine.finalize_object()

@@ -6,9 +6,10 @@ import logging
 
 from llvmlite   import ir
 from utils      import *
+from IPython    import embed
 
 
-def main(path, module, out_l, out_o):
+def main(path, module):
     l = logging.getLogger("tigress")
     l.info(module)
 
@@ -18,7 +19,8 @@ def main(path, module, out_l, out_o):
     p = angr.Project(path)
     p.hook_symbol('strtoul', Strtol())
     p.hook_symbol('printf',  Printf())
-    s = p.factory.entry_state(args=[path, 'dummy'])
+    s = p.factory.entry_state(args=[path, 'dummy'],
+							  add_options=angr.options.unicorn)
     sm = p.factory.simulation_manager(s)
     sm.explore()
 
@@ -34,28 +36,30 @@ def main(path, module, out_l, out_o):
     bld = ir.IRBuilder(fun.append_basic_block())
     for i in sm.deadended:
         l.info("Converting ast to branch on deadended path")
-        with bld.if_then(LLVM(fun, bld, reduce(claripy.And, i.guards, claripy.true))):
-             bld.ret(LLVM(fun, bld, i.state.scratch.hash.ast))
-    if not bld.terminated:
-        bld.unreachable()
+        pred = reduce(claripy.And, i.guards, claripy.true)
+        l.debug(pred)
+        with bld.if_then(LLVM(fun, bld, pred)):
+            l.debug(i.state.scratch.hash.ast)
+            bld.ret(LLVM(fun, bld, i.state.scratch.hash.ast))
+    bld.unreachable()
 
-    l.info("Constructing execution engine")
-    # get a reference to the compiled SECRET function
+    l.info("Constructing execution engine and compiling IR")
     target_machine, engine = create_execution_engine()
-    mod = compile_ir(engine, str(mod), opt=False)
+    mod = compile_ir(engine, str(mod))
+    with open("output/" + module + ".ll", "w")  as f:
+        f.write(str(mod))
+    with open("output/" + module + ".o", "wb")  as f:
+        f.write(target_machine.emit_object(mod))
+    l.debug(str(mod))
+
     SECRET = engine.get_function_address("SECRET")
     SECRET = CFUNCTYPE(c_uint64, c_uint64)(SECRET)
-
-    if out_o is not None:
-        with open(out_o, "wb") as f:
-            f.write(target_machine.emit_object(mod))
-    if out_l is not None:
-        with open(out_l, "w")  as f:
-            f.write(str(mod))
-
-    # bring us to REPL where we can interact with SECRET
-    # import IPython
-    # IPython.embed()
+    for i in sm.deadended:
+        # generates up to 20 satisfying inputs to get
+        # to this deadended path
+        l.info("Generating test cases for deadended path")
+        for test in i.solver.eval_upto(input_, 20):
+            l.info("SECRET({})={}".format(test, SECRET(test)))
 
 
 class Strtol(angr.SimProcedure):
@@ -63,10 +67,12 @@ class Strtol(angr.SimProcedure):
     def run(self, nptr, endptr, base):
         # return a symbolic variable (this is easier
         # than using a symbolic argv)
+        global input_
         logging.getLogger('tigress.strtol').info("Returning symbolic input")
         self.return_type = angr.sim_type.SimTypeInt(
                 self.state.arch, True)
-        return claripy.BVS('input', 64)
+        input_ = claripy.BVS('input', 64)
+        return input_
 
 
 class Printf(angr.SimProcedure):
@@ -85,11 +91,7 @@ if __name__ == '__main__':
     logging.getLogger('angr').setLevel('WARNING')
     logging.getLogger('tigress').setLevel('INFO')
 
-    parser = argparse.ArgumentParser(
-            description="(Partial) solution to tigress protection challenges")
+    parser = argparse.ArgumentParser()
     parser.add_argument('binary')
-    parser.add_argument('-o', type=str)
-    parser.add_argument('-l', type=str)
-    parser.set_defaults(opt=True)
     args = parser.parse_args()
-    main(args.binary, os.path.basename(args.binary), args.l, args.o)
+    main(args.binary, os.path.basename(args.binary))

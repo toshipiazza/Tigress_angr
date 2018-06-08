@@ -20,6 +20,10 @@ In summary, the script runs in two phases:
     ```
     where `path_predicate_[1-2]` and `hash_[1-2]` are SMT equations.
 
+Note: this currently solves tigress challenges 0 and 1; challenge 2 requires angr to
+support `rt_sigreturn` and other yet-unsupported system calls, and challenges 3 and up
+have not been tested.
+
 ## Installation
 
 angr is required, which runs best in a virtual environment. llvmlite as of this writing

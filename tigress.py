@@ -5,6 +5,7 @@ import angr
 import logging
 
 from llvmlite   import ir
+from llvmlite   import binding
 from utils      import *
 
 
@@ -43,11 +44,12 @@ def main(path, module):
     bld.unreachable()
 
     l.info("Constructing execution engine and compiling IR")
-    target_machine, engine = create_execution_engine()
-    mod = compile_ir(engine, str(mod))
+    mod = compile_ir(str(mod))
     with open("output/" + module + ".ll", "w")  as f:
         f.write(str(mod))
     with open("output/" + module + ".o", "wb")  as f:
+        target = binding.Target.from_default_triple()
+        target_machine = target.create_target_machine()
         f.write(target_machine.emit_object(mod))
     l.debug(str(mod))
 

@@ -9,7 +9,6 @@ from functools import partial
 binding.initialize()
 binding.initialize_native_target()
 binding.initialize_native_asmprinter()
-binding.load_library_permanently('libgcc_s.so.1')
 
 l = logging.getLogger("tigress.utils")
 
@@ -134,25 +133,12 @@ def LLVM(fun, bld, ast):
     return z3_to_llvm(fun, bld, z)
 
 
-def create_execution_engine():
-    target = binding.Target.from_default_triple()
-    target_machine = target.create_target_machine()
-    backing_mod = binding.parse_assembly("")
-    engine = binding.create_mcjit_compiler(backing_mod, target_machine)
-    return target_machine, engine
-
-
-def compile_ir(engine, llvm_ir):
+def compile_ir(llvm_ir):
     mod = binding.parse_assembly(llvm_ir)
     mod.verify()
-
     pmb = binding.create_pass_manager_builder()
     pmb.opt_level = 2
     pm = binding.create_module_pass_manager()
     pmb.populate(pm)
     pm.run(mod)
-
-    engine.add_module(mod)
-    engine.finalize_object()
-    engine.run_static_constructors()
     return mod

@@ -1,6 +1,5 @@
-clang+llvm-6.0.0-armv7a-linux-gnueabihf/
 env.sh
 llvm-6.0.0.src/
-llvm-6.0.0.src.tar.xz
 samples/
 tigress-challenges/
+llvmlite/

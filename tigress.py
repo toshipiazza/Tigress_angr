@@ -6,7 +6,6 @@ import logging
 
 from llvmlite   import ir
 from utils      import *
-from IPython    import embed
 
 
 def main(path, module):

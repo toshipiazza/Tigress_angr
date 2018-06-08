@@ -19,7 +19,7 @@ def main(path, module):
     p.hook_symbol('strtoul', Strtol())
     p.hook_symbol('printf',  Printf())
     s = p.factory.entry_state(args=[path, 'dummy'],
-							  add_options=angr.options.unicorn)
+                              add_options=angr.options.unicorn)
     sm = p.factory.simulation_manager(s)
     sm.explore()
 
@@ -50,15 +50,6 @@ def main(path, module):
     with open("output/" + module + ".o", "wb")  as f:
         f.write(target_machine.emit_object(mod))
     l.debug(str(mod))
-
-    SECRET = engine.get_function_address("SECRET")
-    SECRET = CFUNCTYPE(c_uint64, c_uint64)(SECRET)
-    for i in sm.deadended:
-        # generates up to 20 satisfying inputs to get
-        # to this deadended path
-        l.info("Generating test cases for deadended path")
-        for test in i.solver.eval_upto(input_, 20):
-            l.info("SECRET({})={}".format(test, SECRET(test)))
 
 
 class Strtol(angr.SimProcedure):

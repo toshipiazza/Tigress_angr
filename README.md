@@ -58,7 +58,7 @@ Some thoughts, in no particular order:
 - Quarkslab's solution only deobfuscates the binary perfectly if there exists at most one
   symbolic branch--it takes one path, and then visits the other branch afterwards by
   inverting the path predicate. If Quarkslab's solution instead used a worklist algorithm,
-  it would pretty much converge to our solution
+  it would pretty much converge to our solution (XREF: samples/sample_multiple_paths)
 - Triton concretizes symbolic reads and writes; in hashes which require symbolic memory I
   would expect Quarkslab's solution to break. angr reportedly uses a similar algorithm to
   Mayhem, which concretizes symbolic writes, but handles symbolic reads up to a point, so
@@ -66,8 +66,9 @@ Some thoughts, in no particular order:
     - If this is still a concern, i.e. symbolic writes need to be handled to maintain
       correctness of a hash algorithm, we can use the memsight plugin for angr, for
       example, which handles memory fully symbolically.
-- angr paths are pickleable. We can probably just cache the paths in a file in tigress.py,
-  and reuse these paths in testing\_equality.py.
+    - XREF: samples/sample_symbolic_memory_easy and samples/sample_symbolic_memory_hard,
+      which exhibit code sequences which perform symbolic reads. One of the algorithms is
+      a straight up crc32
 
 [tigress]: tigress.cs.arizona.edu
 [Quarkslab]: https://github.com/JonathanSalwan/Tigress_protection

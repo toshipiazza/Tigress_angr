@@ -1,6 +1,5 @@
 env.sh
 llvm-6.0.0.src/
-samples/
 tigress-challenges/
 llvmlite/
 compile_all.sh

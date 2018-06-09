@@ -17,7 +17,8 @@ def main(path, module):
     # printf; we hook them both here for ease of implementation
     l.info("Exploring all possible paths")
     p = angr.Project(path)
-    p.hook_symbol('strtoul', Strtol())
+    input = claripy.BVS('input', 64)
+    p.hook_symbol('strtoul', Strtol(input))
     p.hook_symbol('printf',  Printf())
     s = p.factory.entry_state(args=[path, 'dummy'],
                               add_options=angr.options.unicorn)
@@ -56,15 +57,17 @@ def main(path, module):
 
 class Strtol(angr.SimProcedure):
 
+    def __init__(self, input):
+        super(Strtol, self).__init__()
+        self._input = input
+
     def run(self, nptr, endptr, base):
         # return a symbolic variable (this is easier
         # than using a symbolic argv)
-        global input_
         logging.getLogger('tigress.strtol').info("Returning symbolic input")
         self.return_type = angr.sim_type.SimTypeInt(
                 self.state.arch, True)
-        input_ = claripy.BVS('input', 64)
-        return input_
+        return self._input
 
 
 class Printf(angr.SimProcedure):

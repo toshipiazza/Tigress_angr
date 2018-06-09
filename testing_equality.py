@@ -5,6 +5,7 @@ import angr
 import logging
 import tigress
 
+
 def main(obfuscated, deobfuscated, num_tests):
     l = logging.getLogger("tigress")
 
@@ -12,7 +13,8 @@ def main(obfuscated, deobfuscated, num_tests):
     # printf; we hook them both here for ease of implementation
     l.info("Exploring all possible paths")
     p = angr.Project(obfuscated)
-    p.hook_symbol('strtoul', tigress.Strtol())
+    input = claripy.BVS('input', 64)
+    p.hook_symbol('strtoul', tigress.Strtol(input))
     p.hook_symbol('printf',  tigress.Printf())
     s = p.factory.entry_state(args=[obfuscated, 'dummy'],
                               add_options=angr.options.unicorn)
@@ -25,7 +27,7 @@ def main(obfuscated, deobfuscated, num_tests):
         # Generates up to num_tests satisfying inputs to get
         # to this deadended path
         l.info("Generating test cases for deadended path")
-        for test in i.solver.eval_upto(tigress.input_, num_tests):
+        for test in i.solver.eval_upto(input, num_tests):
             if run_binary(obfuscated, test) != run_binary(deobfuscated, test):
                 l.warn("Test case {} failed!".format(test))
                 wrong += 1

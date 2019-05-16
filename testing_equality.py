@@ -9,21 +9,21 @@ import tigress
 def main(obfuscated, deobfuscated, num_tests):
     l = logging.getLogger("tigress")
 
-    # challenges all feed input to strtoul, and dump output hash via
-    # printf; we hook them both here for ease of implementation
-    l.info("Exploring all possible paths")
+    # call the SECRET function, which will explore all paths
     p = angr.Project(obfuscated)
+    cc = p.factory.cc(
+        func_ty=angr.sim_type.SimTypeFunction(
+            [angr.sim_type.SimTypeLong()], angr.sim_type.SimTypeLong()))
+    SECRET = p.factory.callable(
+        p.loader.find_symbol('SECRET').rebased_addr,
+        perform_merge=False,
+        cc=cc)
     input = claripy.BVS('input', 64)
-    p.hook_symbol('strtoul', tigress.Strtol(input))
-    p.hook_symbol('printf',  tigress.Printf())
-    s = p.factory.entry_state(args=[obfuscated, 'dummy'],
-                              add_options=angr.options.unicorn)
-    sm = p.factory.simulation_manager(s)
-    sm.explore()
+    SECRET(input)
 
     wrong = 0
     total = 0
-    for i in sm.deadended:
+    for i in SECRET.result_path_group.active:
         # Generates up to num_tests satisfying inputs to get
         # to this deadended path
         l.info("Generating test cases for deadended path")

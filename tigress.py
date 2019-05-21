@@ -19,11 +19,14 @@ def main(path, module):
     cc = p.factory.cc(
         func_ty=angr.sim_type.SimTypeFunction([angr.sim_type.SimTypeLong()],
                                               angr.sim_type.SimTypeLong()))
-    SECRET = p.factory.callable(
-        p.loader.find_symbol('SECRET').rebased_addr,
-        perform_merge=False,
-        cc=cc)
-    SECRET(claripy.BVS('input', 64))
+
+    s = p.factory.call_state(
+        p.loader.find_symbol("SECRET").rebased_addr,
+        claripy.BVS('input', 64),
+        cc=cc,
+        add_options=angr.options.unicorn)
+    simgr = p.factory.simulation_manager(s)
+    simgr.run()
 
     # Now we have multiple deadended paths, we can emit equivalent code
     # by looking up that path's predicate and the resulting hash's SMT
@@ -37,7 +40,7 @@ def main(path, module):
         ir.FunctionType(ir.IntType(64), (ir.IntType(64), )),
         name="SECRET")
     bld = ir.IRBuilder(fun.append_basic_block())
-    for i in SECRET.result_path_group.active:
+    for i in simgr.deadended:
         l.info("Converting ast to branch on deadended path")
         pred = functools.reduce(claripy.And, i.simplify(), claripy.true)
         # l.debug("Predicate: {}".format(pred))

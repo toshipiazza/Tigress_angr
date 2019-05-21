@@ -12,18 +12,21 @@ def main(obfuscated, deobfuscated, num_tests):
     # call the SECRET function, which will explore all paths
     p = angr.Project(obfuscated)
     cc = p.factory.cc(
-        func_ty=angr.sim_type.SimTypeFunction(
-            [angr.sim_type.SimTypeLong()], angr.sim_type.SimTypeLong()))
-    SECRET = p.factory.callable(
-        p.loader.find_symbol('SECRET').rebased_addr,
-        perform_merge=False,
-        cc=cc)
+        func_ty=angr.sim_type.SimTypeFunction([angr.sim_type.SimTypeLong()],
+                                              angr.sim_type.SimTypeLong()))
+
     input = claripy.BVS('input', 64)
-    SECRET(input)
+    s = p.factory.call_state(
+        p.loader.find_symbol("SECRET").rebased_addr,
+        input,
+        cc=cc,
+        add_options=angr.options.unicorn)
+    simgr = p.factory.simulation_manager(s)
+    simgr.run()
 
     wrong = 0
     total = 0
-    for i in SECRET.result_path_group.active:
+    for i in simgr.deadended:
         # Generates up to num_tests satisfying inputs to get
         # to this deadended path
         l.info("Generating test cases for deadended path")
